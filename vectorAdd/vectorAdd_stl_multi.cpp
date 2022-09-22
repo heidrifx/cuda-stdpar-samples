@@ -8,6 +8,14 @@
 
 #define TYPE float
 
+/**
+ * @brief STL implementation of a vector addition (not in-place)
+ * 
+ * @tparam T type of vector
+ * @param A input vector
+ * @param B input vector
+ * @param C output vector
+ */
 template<class T>
 void vectorAdd(const std::vector<T> &A, const std::vector<T> &B, std::vector<T> &C) {
     std::transform(std::execution::par_unseq, A.begin(), A.end(), B.begin(), C.begin(),
@@ -32,6 +40,7 @@ void vectorAdd(const int exponent) {
 
     printf("Total time elapsed: %liµs\n", std::chrono::duration_cast<std::chrono::microseconds>(end - start).count());
 
+    // verify
     for (int i = 0; i < numElements; ++i) {
         if (fabs(A[i] + B[i] - C[i]) > 1e-5) {
             fprintf(stderr, "Test: FAILED at element %d!\n", i);
@@ -43,6 +52,7 @@ void vectorAdd(const int exponent) {
 
 int main(int argc, char *argv[]) {
     if (argc < 2) exit(EXIT_FAILURE);
+    // calculate max exponent which still fits in memory
     int maxExponent = getSpace(argv[1], sizeof(float), 3);
     for (int i = 1; i <= maxExponent; ++i) 
         vectorAdd(i);

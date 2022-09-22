@@ -40,6 +40,7 @@
 
 // For the CUDA runtime routines (prefixed with "cuda_")
 #include <cuda_runtime.h>
+
 /**
  * CUDA Kernel Device code
  *
@@ -198,6 +199,7 @@ void vectorAdd(const int exponent) {
  */
 int main(int argc, char *argv[]) {
     if (argc < 2) exit(EXIT_FAILURE);
+    // calculate max exponent which still fits in memory
     int maxExponent = getSpace(argv[1], sizeof(float), 3);
     for (int i = 1; i <= maxExponent; ++i)
         vectorAdd(i);

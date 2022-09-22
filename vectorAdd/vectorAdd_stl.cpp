@@ -8,6 +8,14 @@
 
 #define TYPE float
 
+/**
+ * @brief STL implementation of a vector addition (not in-place)
+ * 
+ * @tparam T type of vector
+ * @param A input vector
+ * @param B input vector
+ * @param C output vector
+ */
 template<class T>
 void vectorAdd(const std::vector<T> &A, const std::vector<T> &B, std::vector<T> &C) {
     std::transform(std::execution::par_unseq, A.begin(), A.end(), B.begin(), C.begin(),
@@ -16,6 +24,7 @@ void vectorAdd(const std::vector<T> &A, const std::vector<T> &B, std::vector<T> 
 
 int main(int argc, char *argv[]) {
     if (argc < 2) exit(EXIT_FAILURE);
+    // get # elements that fit in memory
     int numElements = 1 << getSpace(argv[1], sizeof(float), 3);
     printf("Number of elements %d\n", numElements);
 
@@ -33,6 +42,7 @@ int main(int argc, char *argv[]) {
 
     printf("Total time elapsed: %lims\n", std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count());
 
+    // verify result
     for (int i = 0; i < numElements; ++i) {
         if (fabs(A[i] + B[i] - C[i]) > 1e-5) {
             fprintf(stderr, "Test: FAILED at element %d!\n", i);

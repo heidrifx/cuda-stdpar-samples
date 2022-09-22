@@ -31,8 +31,15 @@
 #include <cstdio>
 #include <string>
 
-typedef unsigned long long int ull_int;
-
+/**
+ * @brief Used to check for CUDA error codes
+ * 
+ * @tparam T result type
+ * @param result CUDA API call
+ * @param func function name
+ * @param file source file
+ * @param line line number in source file
+ */
 template <typename T>
 void check(T result, char const *const func, const char *const file,
            int const line) {
@@ -43,6 +50,14 @@ void check(T result, char const *const func, const char *const file,
     }
 }
 
+/**
+ * @brief Used to calculate the exponent of 2 so that all objects can fit inside the memory
+ * 
+ * @param gpu_memory gpu memory size in GB
+ * @param size size in memory (i.e. sizeof(...))
+ * @param count number of objects to fit in memory
+ * @return int the exponent of 2
+ */
 int getSpace(const char * gpu_memory, const int size, const int count) {
     int mem = std::stoi(gpu_memory);
     return floor(log((mem*pow(10, 9))/(size*count))/log(2));

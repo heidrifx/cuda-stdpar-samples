@@ -40,6 +40,7 @@
 
 // For the CUDA runtime routines (prefixed with "cuda_")
 #include <cuda_runtime.h>
+
 /**
  * CUDA Kernel Device code
  *
@@ -69,6 +70,7 @@ int main(int argc, char *argv[]) {
     // Input vectors A and B & output vector C
     float *A, *B, *C;
 
+    // use usm
     checkCudaErrors(cudaMallocManaged(&A, size));
     checkCudaErrors(cudaMallocManaged(&B, size));
     checkCudaErrors(cudaMallocManaged(&C, size));
