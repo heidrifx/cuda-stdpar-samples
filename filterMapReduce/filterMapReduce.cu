@@ -15,10 +15,15 @@
 #define RANDOM 1
 
 /**
- * CUDA Kernel Device code
+ * @brief CUDA kernel device code for a filter-map-reduce operation
+ * 
+ * @param g_inputData input data
+ * @param g_outputData output data
  */
 __global__ void fmr(const int *g_inputData, int *g_outputData) {
+    // shared memory for reduction
     extern __shared__ int sharedData[];
+    // threadID & array index
     auto tid = threadIdx.x,
             i = blockIdx.x * blockDim.x + threadIdx.x;
 
@@ -41,6 +46,7 @@ __global__ void fmr(const int *g_inputData, int *g_outputData) {
         __syncthreads();
     }
 
+    // copy reduction result from shared to global memory
     if (tid == 0) g_outputData[blockIdx.x] = sharedData[0];
 }
 

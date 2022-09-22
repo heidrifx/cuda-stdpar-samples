@@ -8,30 +8,30 @@
 
 #define TYPE int //long
 
-template<class T>
-T fmr(const std::vector<T> &x) {
-    std::vector<T> tmp(x.size());
-    // filter
-    std::transform(std::execution::par_unseq, x.begin(), x.end(), tmp.begin(), [=](auto x) { return x & 1 ? 0 : x; });
-    // map
-    std::transform(std::execution::par_unseq, tmp.begin(), tmp.end(), tmp.begin(), [=](auto x) { return x * 2; });
-    // reduce
-    return std::reduce(std::execution::par_unseq, tmp.begin(), tmp.end(), 0);
-}
-
+/**
+ * @brief Optimized STL implementation of a filter-map-reduce operation
+ * 
+ * @tparam T data type
+ * @param x input vector
+ * @return T filtered, mapped and reduced vector
+ */
 template<class T>
 T optimized_fmr(const std::vector<T> &x) {
-    return std::transform_reduce(std::execution::par_unseq, x.begin(), x.end(), 0, [=](auto x, auto y) { return x + y; },
+    return std::transform_reduce(std::execution::par_unseq, x.begin(), x.end(), T{}, [=](auto x, auto y) { return x + y; },
                           [=](auto x) { return x & 1 ? 0 : x * 2; });
 }
 
 int main(int argc, char *argv[]) {
     if (argc < 2) exit(EXIT_FAILURE);
+
+    // get # of elements that fit in memory
     int numElements = 1 << getSpace(argv[1], sizeof(TYPE), 2);
     printf("Number of elements %d\n", numElements);
 
+    // input vector
     std::vector<TYPE> x(numElements);
 
+    // init
     srand(time(nullptr));
     for (int i = 0; i < numElements; ++i) {
         x[i] = rand() % 200;
@@ -43,6 +43,7 @@ int main(int argc, char *argv[]) {
 
     printf("Total time elapsed: %lims\n", std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count());
 
+    // verify
     auto tmp = 0;
     for (int i = 0; i < numElements; ++i)
         tmp += (x[i] & 1) ? 0 : x[i] * 2;
