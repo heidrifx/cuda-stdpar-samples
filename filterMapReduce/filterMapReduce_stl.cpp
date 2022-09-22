@@ -16,13 +16,13 @@
  * @return T filtered, mapped and reduced vector
  */
 template<class T>
-T fmr(const std::vector<T> &x) {
+T fmr(std::vector<T> &x) {
     // filter
     std::transform(std::execution::par_unseq, x.begin(), x.end(), x.begin(), [=](auto x) { return x & 1 ? 0 : x; });
     // map
     std::transform(std::execution::par_unseq, x.begin(), x.end(), x.begin(), [=](auto x) { return x * 2; });
     // reduce
-    return std::reduce(std::execution::par_unseq, x.begin(), x.end(), T{});
+    return std::reduce(std::execution::par_unseq, x.begin(), x.end(), 0);
 }
 
 int main(int argc, char *argv[]) {
@@ -32,14 +32,15 @@ int main(int argc, char *argv[]) {
     int numElements = 1 << getSpace(argv[1], sizeof(TYPE), 2);
     printf("Number of elements %d\n", numElements);
 
-    // input vector
-    std::vector<TYPE> x(numElements);
+    // input vector and tmp vector to verify later
+    std::vector<TYPE> x(numElements), tmpX(numElements);
 
     // init
     srand(time(nullptr));
     for (int i = 0; i < numElements; ++i) {
         x[i] = rand() % 200;
     }
+    tmpX = x; // save x as the std::transform is in-place
 
     auto start = std::chrono::steady_clock::now();
     auto mappedSum = fmr(x);
@@ -50,7 +51,7 @@ int main(int argc, char *argv[]) {
     // verify
     auto tmp = 0;
     for (int i = 0; i < numElements; ++i)
-        tmp += (x[i] & 1) ? 0 : x[i] * 2;
+        tmp += (tmpX[i] & 1) ? 0 : tmpX[i] * 2;
 
     if (abs(mappedSum - tmp) > 0) {
         fprintf(stderr, "Result verification failed at element!\n");

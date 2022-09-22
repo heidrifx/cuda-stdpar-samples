@@ -30,6 +30,7 @@
 
 #include <cstdio>
 #include <string>
+#include <cmath>
 
 /**
  * @brief Used to check for CUDA error codes
