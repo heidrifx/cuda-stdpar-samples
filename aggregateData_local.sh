@@ -10,15 +10,15 @@ Usage: aggregateData_local memory_size repreats [clear data]\n \
 if [[ "$1" == "-h" || "$1" == "--help" ]]; then printf "$man"; exit; fi
 if [[ $# < 2 ]]; then printf "$man"; exit 21; fi
 
-# create data dir if possible
-[[ ! -d data/ ]] && mkdir data/
-
 # rename vars
 memory=$1
 repeats=$2
 
 # clear data if $3 is 1
-[ "$3" == 1 ] && rm -f data/*
+[ "$3" == 1 ] && rm -rf data/
+
+# create data dir if possible
+[[ ! -d data/ ]] && mkdir data/
 
 for file in bin/*
 do
