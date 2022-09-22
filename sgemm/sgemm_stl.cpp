@@ -8,9 +8,18 @@
 #define TYPE double
 #define N 1024
 
+/** Matrix object */
 template<class T>
 using Matrix = std::vector<std::vector<T>>;
 
+/**
+ * @brief STL implementation of a single percision general matrix multiplication
+ * 
+ * @tparam T data type
+ * @param A input matrix
+ * @param B input matrix
+ * @return Matrix<T> output matrix
+ */
 template<class T>
 Matrix<T> sgemm(Matrix<T> const &A, Matrix<T> const &B) {
     auto rows = A.size();
@@ -25,12 +34,11 @@ Matrix<T> sgemm(Matrix<T> const &A, Matrix<T> const &B) {
                 tB[c][r] = B[r][c];
 
     // parallel inner_product
-#pragma unroll
     for (auto &a: A) {
         std::vector<T> tmp(cols);
 #pragma omp parallel for
         for (auto i = 0; i < tB.size(); ++i)
-            tmp[i] = std::transform_reduce(std::execution::par_unseq, a.begin(), a.end(), tB[i].begin(), 0.0);
+            tmp[i] = std::transform_reduce(std::execution::par_unseq, a.begin(), a.end(), tB[i].begin(), T{});
         result.push_back(std::move(tmp));
     }
 
@@ -51,6 +59,8 @@ int main() {
      */
     Matrix<TYPE> A(N, std::vector<TYPE>(N));
     Matrix<TYPE> B(N, std::vector<TYPE>(N));
+
+    // init
     std::srand(time(nullptr));
     for (auto n = 0; n < N; n++)
         for (auto m = 0; m < N; m++)

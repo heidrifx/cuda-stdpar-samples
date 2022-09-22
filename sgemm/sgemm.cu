@@ -39,41 +39,68 @@
 #define BLOCK_SIZE (1<<5)
 
 /**
- * CUDA Kernel Device code
+ * @brief CUDA kernel device code for a single precision general matrix multiplication
+ * 
+ * @tparam T data type
+ * @param A input matrix
+ * @param B input matrix
+ * @param C output matrix
+ * @param wA width of matrix A
+ * @param wB width of matrix B
  */
 template<class T>
 __global__ void sgemm(const T *A, const T *B, T *C, const size_t wA, const size_t wB) {
+    // block index
     auto bx = blockIdx.x;
     auto by = blockIdx.y;
+    // thread index
     auto tx = threadIdx.x;
     auto ty = threadIdx.y;
 
+    // Index of the first sub-matrix of A processed by the block
     auto aBegin = wA * BLOCK_SIZE * by;
+    // Index of the last sub-matrix of A processed by the block
     auto aEnd = aBegin + wA - 1;
+	// Step size used to iterate trough the sub-matrices of A
     auto aStep = BLOCK_SIZE;
 
+	// Index of the first sub-matrix of B processed by the block
     auto bBegin = BLOCK_SIZE * bx;
+	// Step size used to iterate through the sub-matrices of B
     auto bStep = BLOCK_SIZE;
 
-    auto Csub = 0.f;
+	// Csub is used to store the element of the block sub-matrix
+	// that is computed by the thread
+    auto Csub = T{};
 
+	// Loop over all the sub-matrices of A and B
+	// required to compute the block sub-matrix
     for (size_t a = aBegin, b = bBegin; a <= aEnd; a += aStep, b += bStep) {
+		// shared memory for the sub-matrices of A and B
         __shared__ T Asub[BLOCK_SIZE][BLOCK_SIZE];
         __shared__ T Bsub[BLOCK_SIZE][BLOCK_SIZE];
 
+		// load matrices from device to shared memory
+		// each threads load one element of each matrix
         Asub[ty][tx] = A[a + wA * ty + tx];
         Bsub[ty][tx] = B[b + wB * ty + tx];
-
         __syncthreads();
 
+		// Multiply the two matrices together;
+		// each thread computes one element
+		// of the block sub-matrix
 #pragma unroll
-        for (size_t k = 0; k < BLOCK_SIZE; ++k) {
+        for (size_t k = 0; k < BLOCK_SIZE; ++k) 
             Csub += Asub[ty][k] * Bsub[k][tx];
-        }
 
+		// Synchronize to make sure that the preceding
+		// computation is done before loading two new
+		// sub-matrices of A and B in the next iteration
         __syncthreads();
     }
 
+	// Write the block sub-matrix to device memory;
+	// each thread writes one element
     auto c = wB * BLOCK_SIZE * by + BLOCK_SIZE * bx;
     C[c + wB * ty + tx] = Csub;
 }
@@ -134,14 +161,6 @@ int main() {
 
     sgemm<TYPE><<<grid, threads>>>(d_A, d_B, d_C, dimsA.x, dimsB.x);
     checkCudaErrors(cudaGetLastError());
-
-    // run kernel multiple times
-    /*
-    auto nIter = 1<<12;
-    for (size_t i = 0; i < nIter; i++) {
-        sgemm<<<grid, threads>>>(d_A, d_B, d_C, dimsA.x, dimsB.x);
-    }
-    */
 
     // cpy device -> host
     checkCudaErrors(cudaMemcpy(h_C, d_C, mem_size_C, cudaMemcpyDeviceToHost));
