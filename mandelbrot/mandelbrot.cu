@@ -1,7 +1,3 @@
-/**
- * Compute the mandelbrot set
- */
-
 #include <cuda_runtime.h>
 #include "device_launch_parameters.h"
 #include <iostream>
@@ -11,26 +7,39 @@
 #define MAX_ITER 10000
 
 /**
- * CUDA Kernel Device code
+ * @brief CUDA kernel device code to generate a picture of the mandelbrot set
+ * 
+ * @param pos image array
+ * @param width image width
+ * @param height  image height
  */
-__global__ void calc(int *pos, const ull_int width, const ull_int height) {
+__global__ void calc(int *pos, const uint64_t width, const uint64_t height) {
     int row = blockIdx.y * blockDim.y + threadIdx.y;  // WIDTH
     int col = blockIdx.x * blockDim.x + threadIdx.x;  // HEIGHT
-    ull_int idx = row * width + col,
+    uint64_t idx = row * width + col,
         n = width * height;
 
+    // return if current index, col or row is out of bounds
     if(col >= width || row >= height || idx >= n) return;
 
+    // c = x0 + iy0
     float x0 = ((float)col / width) * 3.5f - 2.5f;
     float y0 = ((float)row / height) * 3.5f - 1.75f;
 
+    // z = x + iy
     float x = 0.0f;
     float y = 0.0f;
     int iter = 0;
     float xtemp;
+
     while((x * x + y * y <= 4.0f) && (iter < MAX_ITER)) { 
+        // z^2 = x^2 + i2xy - y^2
+        // Re(z^2 + c) = x^2 - y^2 +x0
         xtemp = x * x - y * y + x0;
+
+        // Im(z^2 + c) = 2xy + y0
         y = 2.0f * x * y + y0;
+
         x = xtemp;
         iter++;
     }
@@ -46,9 +55,10 @@ __global__ void calc(int *pos, const ull_int width, const ull_int height) {
 int main(int argc, char *argv[]) {
     if (argc < 2) exit(EXIT_FAILURE);
 
+    // memory size in GB
     int memory = std::stoi(argv[1]);
     int factor = floor(std::sqrt(pow(10,9)*memory/sizeof(int))/5000);
-    ull_int height = 5000 * factor,
+    uint64_t height = 5000 * factor,
         width = height,
         n = width * height;
 
@@ -56,10 +66,10 @@ int main(int argc, char *argv[]) {
     auto *h_image_buffer = (int *) malloc(sizeof(int) * n);
     printf("Calculating Mandelbrot-Set picture of size %llu x %llu\n", width, height);
 
+    checkCudaErrors(cudaMalloc(&d_image_buffer, sizeof(int) * n));
+
     // start timer
     auto start = std::chrono::steady_clock::now();
-
-    checkCudaErrors(cudaMalloc(&d_image_buffer, sizeof(int) * n));
 
     dim3 block_size(16, 16);
     dim3 grid_size(width / block_size.x, height / block_size.y);
@@ -74,6 +84,7 @@ int main(int argc, char *argv[]) {
 
     checkCudaErrors(cudaFree(d_image_buffer));
 
+    // save image
     if (argc > 2 && std::stoi(argv[2]) == 1) {
         FILE* pgmimg;
         pgmimg = fopen("mandelbrot_cuda.pgm", "wb");

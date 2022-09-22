@@ -17,7 +17,7 @@
  */
 template <class T>
 T reduce(const std::vector<T> v) {
-    return std::reduce(std::execution::par_unseq, v.begin(), v.end(), 0.0f);
+    return std::reduce(std::execution::par_unseq, v.begin(), v.end(), T{});
 }
 
 int main(int argc, char* argv[]) {
