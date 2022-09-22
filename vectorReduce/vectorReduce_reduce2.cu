@@ -25,10 +25,6 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-/**
- * Single precision general matrix multiplication
- */
-
 #include <cuda_runtime.h>
 #include "../helper.h"
 #include <cstdio>
@@ -43,68 +39,36 @@
 #define BLOCK_SIZE (1 << 9)
 
 /**
- * CUDA Kernel Device code for a simple vector reduction
+ * @brief CUDA kernel device code for a simple vector reduction
+ * 
  * @tparam T data type
- * @param g_idata input data
- * @param g_odata output data
+ * @param g_idata input array
+ * @param g_odata output array
+ * @param n input length
  */
 template<class T>
-__global__ void reduce0(const T *g_idata, T *g_odata) {
+__global__ void reduce2(const T *g_idata, T *g_odata, const uint64_t n) {
+    // shared memory
     extern __shared__ T sdata0[];
+    // threadID & array index
     auto tid = threadIdx.x,
             i = blockIdx.x * blockDim.x + threadIdx.x;
-    sdata0[tid] = g_idata[i];
-    __syncthreads();
 
-    for (auto s = 1; s < blockDim.x; s *= 2) {
-        auto index = 2 * s * tid;
-        if (index < blockDim.x) sdata0[index] += sdata0[index + s];
-        __syncthreads();
-    }
-
-    if (tid == 0) g_odata[blockIdx.x] = sdata0[0];
-}
-
-/**
- * Unroll last warp
- * @tparam T data type
- * @param sdata shared data
- * @param tid thread id
- */
-template<class T>
-__device__ void warpReduce(volatile T *sdata, uint tid) {
-    sdata[tid] += sdata[tid + 32];
-    sdata[tid] += sdata[tid + 16];
-    sdata[tid] += sdata[tid + 8];
-    sdata[tid] += sdata[tid + 4];
-    sdata[tid] += sdata[tid + 2];
-    sdata[tid] += sdata[tid + 1];
-}
-
-/**
- * CUDA Kernel Device code for an optimized vector reduction
- * @tparam T data type
- * @param g_idata input data
- * @param g_odata output data
- */
-template<class T>
-__global__ void reduce1(const T *g_idata, T *g_odata, const uint64_t n) {
-    extern __shared__ T sdata1[];
-    auto tid = threadIdx.x;
-    auto i = blockIdx.x * (blockDim.x * 2) + threadIdx.x;
-
+    // check if inside array
     if (i < n) {
-        sdata1[tid] = g_idata[i] + g_idata[i + blockDim.x];
+        // copy to shared memory
+        sdata0[tid] = g_idata[i];
         __syncthreads();
 
-        for (uint s = blockDim.x / 2; s > 32; s >>= 1) {
-            if (tid < s) sdata1[tid] += sdata1[tid + s];
+        // reduce
+        for (auto s = 1; s < blockDim.x; s *= 2) {
+            auto index = 2 * s * tid;
+            if (index < blockDim.x) sdata0[index] += sdata0[index + s];
             __syncthreads();
         }
 
-        if (tid < 32) warpReduce<T>(sdata1, tid);
-
-        if (tid == 0) g_odata[blockIdx.x] = sdata1[0];
+        // copy result from shared to global memory
+        if (tid == 0) g_odata[blockIdx.x] = sdata0[0];
     }
 }
 
@@ -155,13 +119,12 @@ int main(int argc, char *argv[]) {
     checkCudaErrors(cudaMemcpy(d_V, h_V, mem_size_V, cudaMemcpyHostToDevice));
 
     // launch kernel
-    uint threadsPerBlock = BLOCK_SIZE,
-            blocksPerGrid = (size_V + threadsPerBlock - 1) / threadsPerBlock;
-    dim3 threads(BLOCK_SIZE, BLOCK_SIZE),
-            grid(size_V / threads.x);
-    printf("CUDA kernel launch with %d blocks of %d threads\n", blocksPerGrid, threadsPerBlock);
-    //reduce0<TYPE><<<blocksPerGrid, threadsPerBlock, threadsPerBlock * sizeof(TYPE)>>>(d_V, d_R);
-    reduce1<TYPE><<<blocksPerGrid, threadsPerBlock, threadsPerBlock * sizeof(TYPE)>>>(d_V, d_R, N);
+    dim3 threads, blocks;
+
+    threads = dim3(1<<9, 1, 1);
+    blocks = dim3(size_V / threads.x, 1, 1);
+    printf("CUDA kernel launch with %d blocks of %d threads\n", blocks.x, threads.x);
+    reduce2<TYPE><<<blocks, threads, threads.x * sizeof(TYPE)>>>(d_V, d_R, N);
     checkCudaErrors(cudaGetLastError());
 
     // cpy device -> host
