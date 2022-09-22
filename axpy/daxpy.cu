@@ -11,7 +11,12 @@
 #include "../helper.h"
 
 /**
- * CUDA Kernel Device code
+ * @brief CUDA kernel device code
+ * 
+ * @param n array length
+ * @param a scalar
+ * @param x input array
+ * @param y input array
  */
 __global__ void daxpy(const size_t n, const double a, const double *x, double *y) {
     size_t i = blockIdx.x * blockDim.x + threadIdx.x;
@@ -25,6 +30,7 @@ int main(int argc, char *argv[]) {
     if (argc < 2) exit(EXIT_FAILURE);
     auto err = cudaSuccess;
 
+    // get # of element that fit in memory
     const size_t n = 1 << getSpace(argv[1], sizeof(double), 2);
     const size_t size = n * sizeof(double);
     const double a = 2.0;
