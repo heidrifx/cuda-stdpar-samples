@@ -1,9 +1,10 @@
 #!/bin/bash
 man="\
-Usage: aggregateData_local memory_size repreats [clear data]\n \
+Usage: aggregateData_local memory_size repreats [clear data] [executable]\n \
    memory_size\t must be the number of gigabytes available on the GPU\n \
    repeats\t describes the number of times to repeat each sample\n \
    clear_data\t set to 1 if the data directory should be cleared before\n\
+   executable\t executable or directory of executables to aggregate data for\
 "
 
 # -h and error messages
@@ -20,7 +21,19 @@ repeats=$2
 # create data dir if possible
 [[ ! -d data/ ]] && mkdir data/
 
-for file in bin/*
+# set executable location
+if [[ $4 && -f $4 ]]
+then
+    exec=$4
+elif [[ $4 && -d $4 ]]
+then 
+    exec=$4/*
+else
+    exec=bin/*
+fi
+echo "$exec"
+
+for file in $exec
 do
     # get file name
     name=$(basename $file)
